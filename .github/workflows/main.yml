@@ -1,4 +1,4 @@
-            - name: Deploy Azure AD B2C custom policy
+- name: Deploy Azure AD B2C custom policy
   # You may pin to the exact commit or the version.
   # uses: azure-ad-b2c/deploy-trustframework-policy@126e63df5f83fcfad6fbeaefc9a99fec38bb53bf
   uses: azure-ad-b2c/deploy-trustframework-policy@v5.3
