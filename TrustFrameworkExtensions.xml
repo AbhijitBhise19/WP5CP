@@ -1,0 +1,469 @@
+﻿<TrustFrameworkPolicy
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns="http://schemas.microsoft.com/online/cpim/schemas/2013/06"
+  PolicySchemaVersion="0.3.0.0"
+  TenantId="ABMANINT.onmicrosoft.com"
+  PolicyId="B2C_1A_TrustFrameworkExtensions_New"
+  PublicPolicyUri="http://ABMANINT.onmicrosoft.com/B2C_1A_TrustFrameworkExtensions_New"
+  TenantObjectId="ff282509-6efc-4028-8698-28e75f0a9182">
+  <BasePolicy>
+    <TenantId>ABMANINT.onmicrosoft.com</TenantId>
+    <PolicyId>B2C_1A_TrustFrameworkLocalization_New</PolicyId>
+  </BasePolicy>
+
+<BuildingBlocks>
+      <ClaimsSchema>
+
+      <ClaimType Id="applicationAccess">
+        <DisplayName>Application Access</DisplayName>
+        <DataType>boolean</DataType>
+        <DefaultPartnerClaimTypes>
+          <Protocol Name="OAuth2" PartnerClaimType="applicationAccess" />
+        </DefaultPartnerClaimTypes>
+        <UserHelpText>Indicates if user is authorized for the application</UserHelpText>
+      </ClaimType>
+
+      <!-- app insights -->
+      <ClaimType Id="EventType">
+        <DisplayName>Event type</DisplayName>
+        <DataType>string</DataType>
+      </ClaimType>
+      <ClaimType Id="EventTimestamp">
+        <DisplayName>Event timestamp</DisplayName>
+        <DataType>string</DataType>
+      </ClaimType>
+      <ClaimType Id="PolicyId">
+        <DisplayName>Policy Id</DisplayName>
+        <DataType>string</DataType>
+      </ClaimType>
+      <ClaimType Id="Culture">
+        <DisplayName>Culture ID</DisplayName>
+        <DataType>string</DataType>
+      </ClaimType>
+      <ClaimType Id="CorrelationId">
+        <DisplayName>Correlation Id</DisplayName>
+        <DataType>string</DataType>
+      </ClaimType>
+      <ClaimType Id="federatedUser">
+        <DisplayName>Federated user</DisplayName>
+        <DataType>boolean</DataType>
+      </ClaimType>
+      <ClaimType Id="parsedDomain">
+        <DisplayName>Domain name</DisplayName>
+        <DataType>string</DataType>
+        <UserHelpText>The domain portion of the email address.</UserHelpText>
+      </ClaimType>
+      <ClaimType Id="userInLocalDirectory">
+        <DisplayName>userInLocalDirectory</DisplayName>
+        <DataType>boolean</DataType>
+      </ClaimType>
+
+      <!--honeypot-->
+      <ClaimType Id="isBot">
+        <DisplayName>Bot Check</DisplayName>
+        <DataType>boolean</DataType>
+        <DefaultPartnerClaimTypes>
+          <Protocol Name="OAuth2" PartnerClaimType="isBot" />
+        </DefaultPartnerClaimTypes>
+        <UserHelpText>Bot Detection</UserHelpText>
+      </ClaimType>
+      </ClaimsSchema>
+
+  
+      
+      <ClaimsTransformations>
+        <ClaimsTransformation Id="AssertGroupAccess" TransformationMethod="AssertBooleanClaimIsEqualToValue">
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="applicationAccess" TransformationClaimType="inputClaim" />
+          </InputClaims>
+          <InputParameters>
+            <InputParameter Id="valueToCompareTo" DataType="boolean" Value="true" />
+            <InputParameter Id="errorMessage" DataType="string" Value="You are not authorized to access this application." />
+          </InputParameters>
+        </ClaimsTransformation>
+
+      <!--honeypot-->
+      <ClaimsTransformation Id="AssertIsNotBot" TransformationMethod="AssertBooleanClaimIsEqualToValue">
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="isBot" TransformationClaimType="inputClaim" />
+          </InputClaims>
+          <InputParameters>
+            <InputParameter Id="valueToCompareTo" DataType="boolean" Value="false" />
+            <!--<InputParameter Id="assertionClaimsTransformationErrorMessage" DataType="string" Value="Bot activity detected. Submission blocked." />-->
+          </InputParameters>
+        </ClaimsTransformation>
+
+      </ClaimsTransformations>
+
+  </BuildingBlocks>
+
+  <ClaimsProviders>
+
+    <ClaimsProvider>
+  <DisplayName>Check User Group Membership</DisplayName>
+  <TechnicalProfiles>
+    <TechnicalProfile Id="REST-CheckUserGroup">
+      <DisplayName>Check Group Membership</DisplayName>
+      <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine"/>
+        <Metadata>
+          <Item Key="ServiceUrl">https://testgroupcheck.azurewebsites.net/api/CheckUserGroup</Item>
+          <Item Key="SendClaimsIn">Body</Item>
+          <Item Key="AuthenticationType">None</Item>
+          <Item Key="AllowInsecureAuthInProduction">true</Item>
+        </Metadata>
+        <InputClaims>
+          <InputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="objectId"/>
+        </InputClaims>
+        <OutputClaims>
+          <OutputClaim ClaimTypeReferenceId="applicationAccess" PartnerClaimType="applicationAccess"/>
+        </OutputClaims>
+          <OutputClaimsTransformations>
+    <OutputClaimsTransformation ReferenceId="AssertGroupAccess" />
+  </OutputClaimsTransformations>
+      <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
+    </TechnicalProfile>
+  </TechnicalProfiles>
+</ClaimsProvider>
+
+<ClaimsProvider>
+      <DisplayName>Application Insights</DisplayName>
+      <TechnicalProfiles>
+        <TechnicalProfile Id="AppInsights-Common">
+          <DisplayName>Application Insights</DisplayName>
+          <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.Insights.AzureApplicationInsightsProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+          <Metadata>
+            <!-- The ApplicationInsights instrumentation key, which you use for logging the events -->
+            <Item Key="InstrumentationKey">1be2c029-b11b-4c33-b7d3-e20a59fc3322</Item>
+            <Item Key="DeveloperMode">false</Item>
+            <Item Key="DisableTelemetry ">false</Item>
+          </Metadata>
+          <InputClaims>
+
+            <InputClaim ClaimTypeReferenceId="EventTimestamp" PartnerClaimType="{property:EventTimestamp}" DefaultValue="{Context:DateTimeInUtc}" />
+            <InputClaim ClaimTypeReferenceId="tenantId" PartnerClaimType="{property:TenantId}" DefaultValue="{Policy:TrustFrameworkTenantId}" />
+            <InputClaim ClaimTypeReferenceId="PolicyId" PartnerClaimType="{property:Policy}" DefaultValue="{Policy:PolicyId}" />
+            <InputClaim ClaimTypeReferenceId="CorrelationId" PartnerClaimType="{property:CorrelationId}" DefaultValue="{Context:CorrelationId}" />
+            <InputClaim ClaimTypeReferenceId="Culture" PartnerClaimType="{property:Culture}" DefaultValue="{Culture:RFC5646}" />
+          </InputClaims>
+        </TechnicalProfile>
+        <TechnicalProfile Id="AppInsights-SignInRequest">
+          <InputClaims>
+
+            <InputClaim ClaimTypeReferenceId="EventType" PartnerClaimType="eventName" DefaultValue="SignInRequest" />
+          </InputClaims>
+          <IncludeTechnicalProfile ReferenceId="AppInsights-Common" />
+        </TechnicalProfile>
+        <TechnicalProfile Id="AppInsights-UserSignUp">
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="EventType" PartnerClaimType="eventName" DefaultValue="UserSignUp" />
+          </InputClaims>
+          <IncludeTechnicalProfile ReferenceId="AppInsights-Common" />
+        </TechnicalProfile>
+        <TechnicalProfile Id="AppInsights-SignInComplete">
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="EventType" PartnerClaimType="eventName" DefaultValue="SignInComplete" />
+            <InputClaim ClaimTypeReferenceId="federatedUser" PartnerClaimType="{property:FederatedUser}" DefaultValue="false" />
+            <InputClaim ClaimTypeReferenceId="parsedDomain" PartnerClaimType="{property:FederationPartner}" DefaultValue="Not Applicable" />
+            <InputClaim ClaimTypeReferenceId="identityProvider" PartnerClaimType="{property:IDP}" DefaultValue="Local" />
+          </InputClaims>
+          <IncludeTechnicalProfile ReferenceId="AppInsights-Common" />
+        </TechnicalProfile>
+        <!-- HONEYPOT -->
+        <TechnicalProfile Id="AppInsights-HoneypotTrigger">
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="EventType" PartnerClaimType="eventName" DefaultValue="HoneypotValidation" />
+          </InputClaims>
+          <IncludeTechnicalProfile ReferenceId="AppInsights-Common" />
+        </TechnicalProfile>
+
+      </TechnicalProfiles>
+    </ClaimsProvider>
+    <!--honeypot-->
+    <ClaimsProvider>
+    <DisplayName>Local Account New</DisplayName>
+    <TechnicalProfiles>
+            <!-- This technical profile uses a validation technical profile to authenticate the user. -->
+        <TechnicalProfile Id="SelfAsserted-LocalAccountSignin-Email">
+          <DisplayName>Local Account Signin</DisplayName>
+          <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.SelfAssertedAttributeProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+          <Metadata>
+            <Item Key="SignUpTarget">SignUpWithLogonEmailExchange</Item>
+            <Item Key="setting.operatingMode">Email</Item>
+            <Item Key="ContentDefinitionReferenceId">api.localaccountsignin</Item>
+            <Item Key="IncludeClaimResolvingInClaimsHandling">true</Item>
+          </Metadata>
+          <IncludeInSso>false</IncludeInSso>
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="signInName" DefaultValue="{OIDC:LoginHint}" AlwaysUseDefaultValue="true" />
+            <InputClaim ClaimTypeReferenceId="isBot" />
+          </InputClaims>
+
+          <OutputClaims>
+            <OutputClaim ClaimTypeReferenceId="signInName" Required="true" />
+            <OutputClaim ClaimTypeReferenceId="password" Required="true" />
+            <OutputClaim ClaimTypeReferenceId="objectId" />
+            <OutputClaim ClaimTypeReferenceId="authenticationSource" />
+           
+          </OutputClaims>
+          <ValidationTechnicalProfiles>
+            <ValidationTechnicalProfile ReferenceId="login-NonInteractive" />
+          </ValidationTechnicalProfiles>
+          <UseTechnicalProfileForSessionManagement ReferenceId="SM-AAD" />
+        </TechnicalProfile>
+        </TechnicalProfiles>
+      </ClaimsProvider>
+    <ClaimsProvider>
+      <DisplayName>Local Account SignIn</DisplayName>
+      <TechnicalProfiles>
+         <TechnicalProfile Id="login-NonInteractive">
+          <Metadata>
+            <Item Key="client_id">854f4db7-0f17-4229-bcb2-b7114862a40d</Item>
+            <Item Key="IdTokenAudience">3850c491-51c1-4b92-8e14-0a3e93927aae</Item>
+          </Metadata>
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="client_id" DefaultValue="854f4db7-0f17-4229-bcb2-b7114862a40d" />
+            <InputClaim ClaimTypeReferenceId="resource_id" PartnerClaimType="resource" DefaultValue="3850c491-51c1-4b92-8e14-0a3e93927aae" />
+          </InputClaims>
+        </TechnicalProfile>
+      </TechnicalProfiles>
+    </ClaimsProvider>
+<!--honeypot-->
+    <ClaimsProvider>
+  <DisplayName>Honeypot Validation</DisplayName>
+  <TechnicalProfiles>
+    <TechnicalProfile Id="Assert-IsNotBot">
+      <DisplayName>Validate Bot Detection</DisplayName>
+      <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.ClaimsTransformationProtocolProvider" />
+        <OutputClaimsTransformations>
+          <OutputClaimsTransformation ReferenceId="AssertIsNotBot" />
+        </OutputClaimsTransformations>
+      
+      <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
+    </TechnicalProfile>
+  </TechnicalProfiles>
+</ClaimsProvider>
+
+    <ClaimsProvider>
+      <DisplayName>Token Issuer</DisplayName>
+      <TechnicalProfiles>
+        <TechnicalProfile Id="JwtIssuer">
+          <OutputClaims>
+            <OutputClaim ClaimTypeReferenceId="applicationAccess" />
+            <OutputClaim ClaimTypeReferenceId="isBot" />
+          </OutputClaims>
+        </TechnicalProfile>
+      </TechnicalProfiles>
+    </ClaimsProvider>
+    </ClaimsProviders>
+
+    <!--UserJourneys>
+	
+	</UserJourneys-->
+<UserJourneys>
+
+    <UserJourney Id="CustomSignUpOrSignIn">
+      <OrchestrationSteps>
+
+        <OrchestrationStep Order="1" Type="CombinedSignInAndSignUp" ContentDefinitionReferenceId="api.signuporsignin">
+          <ClaimsProviderSelections>
+             <ClaimsProviderSelection TargetClaimsExchangeId="GoogleExchange" />
+            <ClaimsProviderSelection ValidationClaimsExchangeId="LocalAccountSigninEmailExchange" />
+          </ClaimsProviderSelections>
+          <ClaimsExchanges>
+           
+            <ClaimsExchange Id="LocalAccountSigninEmailExchange" TechnicalProfileReferenceId="SelfAsserted-LocalAccountSignin-Email" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <!-- Check if the user has selected to sign in using one of the social providers -->
+        <OrchestrationStep Order="2" Type="ClaimsExchange">
+          <Preconditions>
+            <Precondition Type="ClaimsExist" ExecuteActionsIf="true">
+              <Value>objectId</Value>
+              <Action>SkipThisOrchestrationStep</Action>
+            </Precondition>
+          </Preconditions>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="GoogleExchange" TechnicalProfileReferenceId="Google-OAUTH2" />
+            <ClaimsExchange Id="SignUpWithLogonEmailExchange" TechnicalProfileReferenceId="LocalAccountSignUpWithLogonEmail" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <!-- For social IDP authentication, attempt to find the user account in the directory. -->
+        <OrchestrationStep Order="3" Type="ClaimsExchange">
+          <Preconditions>
+            <Precondition Type="ClaimEquals" ExecuteActionsIf="true">
+              <Value>authenticationSource</Value>
+              <Value>localAccountAuthentication</Value>
+              <Action>SkipThisOrchestrationStep</Action>
+            </Precondition>
+          </Preconditions>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="AADUserReadUsingAlternativeSecurityId" TechnicalProfileReferenceId="AAD-UserReadUsingAlternativeSecurityId-NoError" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <!-- Show self-asserted page only if the directory does not have the user account already (i.e. we do not have an objectId). 
+          This can only happen when authentication happened using a social IDP. If local account was created or authentication done
+          using ESTS in step 2, then an user account must exist in the directory by this time. -->
+        <OrchestrationStep Order="4" Type="ClaimsExchange">
+          <Preconditions>
+            <Precondition Type="ClaimsExist" ExecuteActionsIf="true">
+              <Value>objectId</Value>
+              <Action>SkipThisOrchestrationStep</Action>
+            </Precondition>
+          </Preconditions>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="SelfAsserted-Social" TechnicalProfileReferenceId="SelfAsserted-Social" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <!-- This step reads any user attributes that we may not have received when authenticating using ESTS so they can be sent 
+          in the token. -->
+        <OrchestrationStep Order="5" Type="ClaimsExchange">
+          <Preconditions>
+            <Precondition Type="ClaimEquals" ExecuteActionsIf="true">
+              <Value>authenticationSource</Value>
+              <Value>socialIdpAuthentication</Value>
+              <Action>SkipThisOrchestrationStep</Action>
+            </Precondition>
+          </Preconditions>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="AADUserReadWithObjectId" TechnicalProfileReferenceId="AAD-UserReadUsingObjectId" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <!-- The previous step (SelfAsserted-Social) could have been skipped if there were no attributes to collect 
+             from the user. So, in that case, create the user in the directory if one does not already exist 
+             (verified using objectId which would be set from the last step if account was created in the directory. -->
+        <OrchestrationStep Order="6" Type="ClaimsExchange">
+          <Preconditions>
+            <Precondition Type="ClaimsExist" ExecuteActionsIf="true">
+              <Value>objectId</Value>
+              <Action>SkipThisOrchestrationStep</Action>
+            </Precondition>
+          </Preconditions>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="AADUserWrite" TechnicalProfileReferenceId="AAD-UserWriteUsingAlternativeSecurityId" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+<!--honeypot-->
+ <!--       <OrchestrationStep Order="7" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="ValidateHoneypot" TechnicalProfileReferenceId="Assert-IsNotBot" />
+          </ClaimsExchanges>
+        </OrchestrationStep> honeypot-->
+        <OrchestrationStep Order="7" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="LogBotValidation" TechnicalProfileReferenceId="AppInsights-HoneypotTrigger" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <OrchestrationStep Order="8" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="CheckUserGroupAccess" TechnicalProfileReferenceId="REST-CheckUserGroup" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="9" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
+
+      </OrchestrationSteps>
+      <ClientDefinition ReferenceId="DefaultWeb" />
+    </UserJourney>
+
+    <UserJourney Id="ProfileEdit">
+      <OrchestrationSteps>
+        <OrchestrationStep Order="1" Type="ClaimsProviderSelection" ContentDefinitionReferenceId="api.idpselections">
+          <ClaimsProviderSelections>
+            <ClaimsProviderSelection TargetClaimsExchangeId="GoogleExchange" />
+            <ClaimsProviderSelection TargetClaimsExchangeId="LocalAccountSigninEmailExchange" />
+          </ClaimsProviderSelections>
+        </OrchestrationStep>
+        <OrchestrationStep Order="2" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="GoogleExchange" TechnicalProfileReferenceId="Google-OAUTH2" />
+            <ClaimsExchange Id="LocalAccountSigninEmailExchange" TechnicalProfileReferenceId="SelfAsserted-LocalAccountSignin-Email" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="3" Type="ClaimsExchange">
+          <Preconditions>
+            <Precondition Type="ClaimEquals" ExecuteActionsIf="true">
+              <Value>authenticationSource</Value>
+              <Value>localAccountAuthentication</Value>
+              <Action>SkipThisOrchestrationStep</Action>
+            </Precondition>
+          </Preconditions>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="AADUserRead" TechnicalProfileReferenceId="AAD-UserReadUsingAlternativeSecurityId" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="4" Type="ClaimsExchange">
+          <Preconditions>
+            <Precondition Type="ClaimEquals" ExecuteActionsIf="true">
+              <Value>authenticationSource</Value>
+              <Value>socialIdpAuthentication</Value>
+              <Action>SkipThisOrchestrationStep</Action>
+            </Precondition>
+          </Preconditions>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="AADUserReadWithObjectId" TechnicalProfileReferenceId="AAD-UserReadUsingObjectId" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <!-- If the user ever stepped up to use 2FA, profile update must verify this because the user will be able to change
+          their sign in email address or strong authentication email here. This guards against scenarios where a user's 
+          password is stolen, the attacker can change the email addresses leaving no way for the user to recover their account.
+          By requiring 2FA, stolen passwords cannot be used to take over the account completely. -->
+        <OrchestrationStep Order="5" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="PhoneFactor" TechnicalProfileReferenceId="PhoneFactor-InputOrVerify" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="6" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="B2CUserProfileUpdateExchange" TechnicalProfileReferenceId="SelfAsserted-ProfileUpdate" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="7" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
+      </OrchestrationSteps>
+      <ClientDefinition ReferenceId="DefaultWeb" />
+    </UserJourney>
+    <UserJourney Id="PasswordReset">
+      <OrchestrationSteps>
+        <OrchestrationStep Order="1" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="PasswordResetUsingEmailAddressExchange" TechnicalProfileReferenceId="LocalAccountDiscoveryUsingEmailAddress" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="2" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="PhoneFactor-Verify" TechnicalProfileReferenceId="PhoneFactor-InputOrVerify" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="3" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="NewCredentials" TechnicalProfileReferenceId="LocalAccountWritePasswordUsingObjectId" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="4" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
+      </OrchestrationSteps>
+      <ClientDefinition ReferenceId="DefaultWeb" />
+    </UserJourney>
+    <UserJourney Id="RedeemRefreshToken">
+      <PreserveOriginalAssertion>false</PreserveOriginalAssertion>
+      <OrchestrationSteps>
+        <OrchestrationStep Order="1" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="RefreshTokenSetupExchange" TechnicalProfileReferenceId="RefreshTokenReadAndSetup" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <!-- Extra steps can be added before or after this step for REST API or claims transformation calls-->
+        <OrchestrationStep Order="2" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="CheckRefreshTokenDateFromAadExchange" TechnicalProfileReferenceId="AAD-UserReadUsingObjectId-CheckRefreshTokenDate" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+        <OrchestrationStep Order="3" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
+      </OrchestrationSteps>
+    </UserJourney>
+
+    </UserJourneys>
+</TrustFrameworkPolicy>
